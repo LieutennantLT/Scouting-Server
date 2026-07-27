@@ -29,7 +29,7 @@ app.post("/match", (req, res) => {
 
     const insert = db.prepare(`
         INSERT INTO matches (
-            matchNumber,
+            matchID,
             team,
             alliance,
             autoPoints,
@@ -44,7 +44,7 @@ app.post("/match", (req, res) => {
 
 
     insert.run(
-        match.id,
+        match.matchID,
         match.team,
         match.alliance,
         match.autoPoints,

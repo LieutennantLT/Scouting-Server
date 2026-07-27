@@ -7,7 +7,7 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS matches (
         databaseID INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        matchNumber INTEGER,
+        matchID INTEGER,
         team TEXT,
         alliance TEXT,
 

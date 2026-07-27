@@ -1,17 +1,32 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import MatchTable from "./Components/MatchTable.jsx";
 
 function App() {
 
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [allianceFilter, setAllianceFilter] =
+        useState("all");
+
+    const [teamSearch, setTeamSearch] =
+        useState("");
+
 
     async function loadMatches() {
 
         try {
 
-            const response = await fetch("http://localhost:3000/matches");
+            const response = await fetch(
+                "http://localhost:3000/matches"
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Server returned ${response.status}`
+                );
+            }
 
             const data = await response.json();
 
@@ -24,11 +39,20 @@ function App() {
                 error
             );
 
+        } finally {
+
+            setLoading(false);
+
         }
 
-        setLoading(false);
     }
 
+
+    /*
+    ========================================
+    Load Matches
+    ========================================
+    */
 
     useEffect(() => {
 
@@ -39,71 +63,210 @@ function App() {
             5000
         );
 
-        return () => clearInterval(interval);
+        return () =>
+            clearInterval(interval);
 
     }, []);
 
 
+    /*
+    ========================================
+    Filter Matches
+    ========================================
+    */
+
+    const filteredMatches = matches.filter(
+        match => {
+
+            /*
+            Alliance filter
+            */
+
+            if (
+                allianceFilter !== "all" &&
+                match.alliance?.toLowerCase() !==
+                    allianceFilter
+            ) {
+                return false;
+            }
+
+
+            /*
+            Team search
+            */
+
+            if (
+                teamSearch &&
+                !String(match.team)
+                    .toLowerCase()
+                    .includes(
+                        teamSearch.toLowerCase()
+                    )
+            ) {
+                return false;
+            }
+
+
+            return true;
+
+        }
+    );
+
+
+    /*
+    ========================================
+    Loading Screen
+    ========================================
+    */
+
     if (loading) {
-        return <h1>Loading...</h1>;
+
+        return (
+
+            <div className="dashboard">
+
+                <h1>
+                    FRC Scouting Dashboard
+                </h1>
+
+                <div className="loading">
+                    Loading matches...
+                </div>
+
+            </div>
+
+        );
+
     }
 
 
+    /*
+    ========================================
+    Dashboard
+    ========================================
+    */
+
     return (
+
         <div className="dashboard">
 
-            <h1>FRC Scouting Dashboard</h1>
+            <header className="dashboard-header">
 
-            <table>
+                <div>
 
-                <thead>
+                    <h1>
+                        FRC Scouting Dashboard
+                    </h1>
 
-                    <tr>
-                        <th>Match</th>
-                        <th>Team</th>
-                        <th>Alliance</th>
-                        <th>Auto</th>
-                        <th>Teleop</th>
-                        <th>Pass</th>
-                        <th>Climb</th>
-                        <th>Notes</th>
-                    </tr>
+                    <p className="match-count">
 
-                </thead>
+                        Showing{" "}
+                        <strong>
+                            {filteredMatches.length}
+                        </strong>{" "}
+                        of{" "}
+                        <strong>
+                            {matches.length}
+                        </strong>{" "}
+                        matches
+
+                    </p>
+
+                </div>
+
+            </header>
 
 
-                <tbody>
+            {/* Filters */}
 
-                    {matches.map((match) => (
+            <div className="filters">
 
-                        <tr key={match.id}>
+                {/* Team Search */}
 
-                            <td>{match.id}</td>
+                <div className="filter-group">
 
-                            <td>{match.team}</td>
+                    <label htmlFor="team-search">
+                        Search Team
+                    </label>
 
-                            <td>{match.alliance}</td>
+                    <input
+                        id="team-search"
+                        type="text"
+                        placeholder="Team number..."
+                        value={teamSearch}
+                        onChange={(e) =>
+                            setTeamSearch(
+                                e.target.value
+                            )
+                        }
+                    />
 
-                            <td>{match.autoPoints}</td>
+                </div>
 
-                            <td>{match.teleopPoints}</td>
 
-                            <td>{match.teleopPassPoints}</td>
+                {/* Alliance Filter */}
 
-                            <td>{match.climb}</td>
+                <div className="filter-group">
 
-                            <td>{match.notes}</td>
+                    <label htmlFor="alliance-filter">
+                        Alliance
+                    </label>
 
-                        </tr>
+                    <select
+                        id="alliance-filter"
+                        value={allianceFilter}
+                        onChange={(e) =>
+                            setAllianceFilter(
+                                e.target.value
+                            )
+                        }
+                    >
 
-                    ))}
+                        <option value="all">
+                            All Alliances
+                        </option>
 
-                </tbody>
+                        <option value="red">
+                            Red
+                        </option>
 
-            </table>
+                        <option value="blue">
+                            Blue
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                {/* Reset Filters */}
+
+                <button
+                    className="reset-filters"
+                    onClick={() => {
+
+                        setAllianceFilter("all");
+
+                        setTeamSearch("");
+
+                    }}
+                >
+                    Reset Filters
+                </button>
+
+            </div>
+
+
+            {/* Match Table */}
+
+            <MatchTable
+                matches={filteredMatches}
+            />
 
         </div>
+
     );
+
 }
 
 export default App;
