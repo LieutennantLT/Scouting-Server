@@ -17,15 +17,14 @@ const __dirname = path.dirname(__filename);
 app.use(cors());
 app.use(express.json());
 
-// Recieve match data from the scouting app and save it to the database
+// Persistent matches
+let matches = [];
+
+// Recieve match data from the scouting app and save it to the database and to file
 
 app.post("/match", (req, res) => {
 
     const match = req.body;
-
-    console.log("Received match:");
-    console.log(match);
-
 
     const insert = db.prepare(`
         INSERT INTO matches (
@@ -37,11 +36,11 @@ app.post("/match", (req, res) => {
             teleopPassPoints,
             climb,
             notes,
-            broke
+            broke,
+            scoutName
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-
 
     insert.run(
         match.matchID,
@@ -52,9 +51,9 @@ app.post("/match", (req, res) => {
         match.teleopPassPoints,
         match.climb,
         match.notes,
-        match.broke
+        match.broke,
+        match.scoutName
     );
-
 
     res.json({
         success: true,
@@ -62,8 +61,6 @@ app.post("/match", (req, res) => {
     });
 
 });
-
-
 
 // Get all matches from the database and send them to the dashboard
 
@@ -101,5 +98,118 @@ app.listen(PORT, () => {
     console.log(
         `Server running at http://localhost:${PORT}`
     );
+
+});
+
+app.delete("/matches", (req, res) => {
+
+    try {
+
+        db.prepare(
+            "DELETE FROM matches"
+        ).run();
+
+        // Reset the auto-increment ID
+        db.prepare(
+            "DELETE FROM sqlite_sequence WHERE name = 'matches'"
+        ).run();
+
+        res.json({
+            success: true,
+            message: "All matches deleted."
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Error deleting matches:",
+            error
+        );
+
+        res.status(500).json({
+            success: false,
+            error: "Failed to delete matches."
+        });
+
+    }
+
+});
+
+// Importing previous matches
+
+app.post("/matches/import", (req, res) => {
+
+    try {
+
+        const importedMatches = req.body;
+
+        if (!Array.isArray(importedMatches)) {
+
+            return res.status(400).json({
+                success: false,
+                error: "Expected an array of matches."
+            });
+
+        }
+
+        const insert = db.prepare(`
+            INSERT INTO matches (
+                matchID,
+                team,
+                alliance,
+                autoPoints,
+                teleopPoints,
+                teleopPassPoints,
+                climb,
+                notes,
+                broke,
+                scoutName
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const importTransaction = db.transaction(
+            (matches) => {
+
+                for (const match of matches) {
+
+                    insert.run(
+                        match.matchID,
+                        match.team,
+                        match.alliance,
+                        match.autoPoints,
+                        match.teleopPoints,
+                        match.teleopPassPoints,
+                        match.climb,
+                        match.notes,
+                        match.broke,
+                        match.scoutName
+                    );
+
+                }
+
+            }
+        );
+
+        importTransaction(importedMatches);
+
+        res.json({
+            success: true,
+            count: importedMatches.length
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Error importing matches:",
+            error
+        );
+
+        res.status(500).json({
+            success: false,
+            error: "Failed to import matches."
+        });
+
+    }
 
 });

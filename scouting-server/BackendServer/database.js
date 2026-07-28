@@ -17,7 +17,8 @@ db.exec(`
 
         climb TEXT,
         notes TEXT,
-        broke TEXT
+        broke TEXT,
+        scoutName TEXT
     )
 `);
 

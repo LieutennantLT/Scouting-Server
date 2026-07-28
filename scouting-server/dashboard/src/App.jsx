@@ -1,121 +1,34 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
 import "./App.css";
-import MatchTable from "./Components/MatchTable.jsx";
+
+import useMatches from "./Hooks/useMatches.js";
+
+import BottomNav from "./Components/BottomNav.jsx";
+
+import OverallMatchView from "./Pages/OverallMatchView.jsx";
+import OverallTeamView from "./Pages/OverallTeamView.jsx";
+import TeamLookup from "./Pages/TeamLookup.jsx";
+import Graphs from "./Pages/Graphs.jsx";
+import Simulator from "./Pages/Simulator.jsx";
+import DataManagement from "./Components/DataManagement.jsx";
+
 
 function App() {
 
-    const [matches, setMatches] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] =
+        useState("matches");
 
-    const [allianceFilter, setAllianceFilter] =
-        useState("all");
-
-    const [teamSearch, setTeamSearch] =
-        useState("");
-
-
-    async function loadMatches() {
-
-        try {
-
-            const response = await fetch(
-                "http://localhost:3000/matches"
-            );
-
-            if (!response.ok) {
-                throw new Error(
-                    `Server returned ${response.status}`
-                );
-            }
-
-            const data = await response.json();
-
-            setMatches(data);
-
-        } catch (error) {
-
-            console.error(
-                "Error loading matches:",
-                error
-            );
-
-        } finally {
-
-            setLoading(false);
-
-        }
-
-    }
+    const {
+        matches,
+        loading,
+        loadMatches
+    } = useMatches();
 
 
     /*
     ========================================
-    Load Matches
-    ========================================
-    */
-
-    useEffect(() => {
-
-        loadMatches();
-
-        const interval = setInterval(
-            loadMatches,
-            5000
-        );
-
-        return () =>
-            clearInterval(interval);
-
-    }, []);
-
-
-    /*
-    ========================================
-    Filter Matches
-    ========================================
-    */
-
-    const filteredMatches = matches.filter(
-        match => {
-
-            /*
-            Alliance filter
-            */
-
-            if (
-                allianceFilter !== "all" &&
-                match.alliance?.toLowerCase() !==
-                    allianceFilter
-            ) {
-                return false;
-            }
-
-
-            /*
-            Team search
-            */
-
-            if (
-                teamSearch &&
-                !String(match.team)
-                    .toLowerCase()
-                    .includes(
-                        teamSearch.toLowerCase()
-                    )
-            ) {
-                return false;
-            }
-
-
-            return true;
-
-        }
-    );
-
-
-    /*
-    ========================================
-    Loading Screen
+    Loading
     ========================================
     */
 
@@ -142,7 +55,84 @@ function App() {
 
     /*
     ========================================
-    Dashboard
+    Current Page
+    ========================================
+    */
+
+    function renderCurrentPage() {
+
+        switch (activeTab) {
+
+            case "matches":
+
+                return (
+                    <OverallMatchView
+                        matches={matches}
+                    />
+                );
+
+
+            case "teams":
+
+                return (
+                    <OverallTeamView
+                        matches={matches}
+                    />
+                );
+
+
+            case "lookup":
+
+                return (
+                    <TeamLookup
+                        matches={matches}
+                    />
+                );
+
+
+            case "graphs":
+
+                return (
+                    <Graphs
+                        matches={matches}
+                    />
+                );
+
+
+            case "simulator":
+
+                return (
+                    <Simulator
+                        matches={matches}
+                    />
+                );
+
+
+            case "data":
+
+                return (
+                    <DataManagement
+                        onDataChanged={loadMatches}
+                    />
+                );
+
+
+            default:
+
+                return (
+                    <OverallMatchView
+                        matches={matches}
+                    />
+                );
+
+        }
+
+    }
+
+
+    /*
+    ========================================
+    Render
     ========================================
     */
 
@@ -150,117 +140,20 @@ function App() {
 
         <div className="dashboard">
 
-            <header className="dashboard-header">
+            {/* Current Page */}
 
-                <div>
+            <main className="dashboard-content">
 
-                    <h1>
-                        FRC Scouting Dashboard
-                    </h1>
+                {renderCurrentPage()}
 
-                    <p className="match-count">
-
-                        Showing{" "}
-                        <strong>
-                            {filteredMatches.length}
-                        </strong>{" "}
-                        of{" "}
-                        <strong>
-                            {matches.length}
-                        </strong>{" "}
-                        matches
-
-                    </p>
-
-                </div>
-
-            </header>
+            </main>
 
 
-            {/* Filters */}
+            {/* Fixed Bottom Navigation */}
 
-            <div className="filters">
-
-                {/* Team Search */}
-
-                <div className="filter-group">
-
-                    <label htmlFor="team-search">
-                        Search Team
-                    </label>
-
-                    <input
-                        id="team-search"
-                        type="text"
-                        placeholder="Team number..."
-                        value={teamSearch}
-                        onChange={(e) =>
-                            setTeamSearch(
-                                e.target.value
-                            )
-                        }
-                    />
-
-                </div>
-
-
-                {/* Alliance Filter */}
-
-                <div className="filter-group">
-
-                    <label htmlFor="alliance-filter">
-                        Alliance
-                    </label>
-
-                    <select
-                        id="alliance-filter"
-                        value={allianceFilter}
-                        onChange={(e) =>
-                            setAllianceFilter(
-                                e.target.value
-                            )
-                        }
-                    >
-
-                        <option value="all">
-                            All Alliances
-                        </option>
-
-                        <option value="red">
-                            Red
-                        </option>
-
-                        <option value="blue">
-                            Blue
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                {/* Reset Filters */}
-
-                <button
-                    className="reset-filters"
-                    onClick={() => {
-
-                        setAllianceFilter("all");
-
-                        setTeamSearch("");
-
-                    }}
-                >
-                    Reset Filters
-                </button>
-
-            </div>
-
-
-            {/* Match Table */}
-
-            <MatchTable
-                matches={filteredMatches}
+            <BottomNav
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
             />
 
         </div>
@@ -268,5 +161,6 @@ function App() {
     );
 
 }
+
 
 export default App;

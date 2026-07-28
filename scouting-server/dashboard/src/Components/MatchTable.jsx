@@ -1,478 +1,274 @@
 import { useState } from "react";
 
-
-// Higher number = better climb
-
-const climbRank = {
-
-    "L3": 3,
-
-    "L2": 2,
-
-    "L1": 1,
-
-    "Failed": 0,
-
-    "Did Not Attempt": 0,
-
-    "None": 0
-
-};
-
-
 export default function MatchTable({
-    matches
+matches
 }) {
 
-    const [sortColumn, setSortColumn] =
-        useState("matchID");
+const [sortKey, setSortKey] =
+    useState("matchID");
 
-    const [sortDescending, setSortDescending] =
-        useState(true);
+const [sortDirection, setSortDirection] =
+    useState("desc");
 
 
-    /*
-    ========================================
-    Handle Sorting
-    ========================================
-    */
+function handleSort(key) {
 
-    function handleSort(column) {
+    if (sortKey === key) {
 
-        if (sortColumn === column) {
+        setSortDirection(
+            previous =>
+                previous === "asc"
+                    ? "desc"
+                    : "asc"
+        );
 
-            // Same column:
-            // reverse sorting direction
+    } else {
 
-            setSortDescending(
-                previous =>
-                    !previous
-            );
+        setSortKey(key);
 
-        } else {
-
-            // New column:
-            // default to descending
-
-            setSortColumn(column);
-
-            setSortDescending(true);
-
-        }
+        setSortDirection("desc");
 
     }
 
-
-    /*
-    ========================================
-    Sort Matches
-    ========================================
-    */
-
-    const sortedMatches =
-        [...matches].sort(
-            (a, b) => {
-
-                let valueA;
-
-                let valueB;
+}
 
 
-                switch (sortColumn) {
+const sortedMatches =
+    [...matches].sort((a, b) => {
+
+        let aValue =
+            a[sortKey];
+
+        let bValue =
+            b[sortKey];
 
 
-                    /*
-                    Match Number
-                    */
+        /*
+        Climb needs custom
+        numerical sorting.
+        */
 
-                    case "matchID":
+        if (sortKey === "climb") {
 
-                        valueA =
-                            Number(
-                                a.matchID
-                            ) || 0;
+            const climbValues = {
 
-                        valueB =
-                            Number(
-                                b.matchID
-                            ) || 0;
+                "Did Not Attempt": 0,
 
-                        break;
+                "Failed": 0,
 
+                "L1": 1,
 
-                    /*
-                    Team Number
-                    */
+                "L2": 2,
 
-                    case "team":
+                "L3": 3
 
-                        valueA =
-                            Number(
-                                a.team
-                            ) || 0;
+            };
 
-                        valueB =
-                            Number(
-                                b.team
-                            ) || 0;
+            aValue =
+                climbValues[a.climb] || 0;
 
-                        break;
+            bValue =
+                climbValues[b.climb] || 0;
+
+        }
 
 
-                    /*
-                    Auto
-                    */
+        /*
+        Convert numbers
+        */
 
-                    case "autoPoints":
+        if (
+            sortKey !== "climb"
+        ) {
 
-                        valueA =
-                            Number(
-                                a.autoPoints
-                            ) || 0;
+            aValue =
+                Number(aValue) || 0;
 
-                        valueB =
-                            Number(
-                                b.autoPoints
-                            ) || 0;
+            bValue =
+                Number(bValue) || 0;
 
-                        break;
+        }
 
 
-                    /*
-                    Teleop
-                    */
+        if (
+            aValue < bValue
+        ) {
 
-                    case "teleopPoints":
+            return sortDirection === "asc"
+                ? -1
+                : 1;
 
-                        valueA =
-                            Number(
-                                a.teleopPoints
-                            ) || 0;
-
-                        valueB =
-                            Number(
-                                b.teleopPoints
-                            ) || 0;
-
-                        break;
+        }
 
 
-                    /*
-                    Passing
-                    */
+        if (
+            aValue > bValue
+        ) {
 
-                    case "teleopPassPoints":
+            return sortDirection === "asc"
+                ? 1
+                : -1;
 
-                        valueA =
-                            Number(
-                                a.teleopPassPoints
-                            ) || 0;
-
-                        valueB =
-                            Number(
-                                b.teleopPassPoints
-                            ) || 0;
-
-                        break;
+        }
 
 
-                    /*
-                    Climb
-                    */
+        return 0;
 
-                    case "climb":
-
-                        valueA =
-                            climbRank[
-                                a.climb
-                            ] ?? 0;
-
-                        valueB =
-                            climbRank[
-                                b.climb
-                            ] ?? 0;
-
-                        break;
+    });
 
 
-                    default:
+function SortHeader({
+    children,
+    sortKeyName
+}) {
 
-                        return 0;
-
-                }
-
-
-                if (
-                    valueA < valueB
-                ) {
-
-                    return sortDescending
-                        ? 1
-                        : -1;
-
-                }
+    const isActive =
+        sortKey === sortKeyName;
 
 
-                if (
-                    valueA > valueB
-                ) {
+    return (
 
-                    return sortDescending
-                        ? -1
-                        : 1;
-
-                }
-
-
-                return 0;
-
-            }
-        );
-
-
-    /*
-    ========================================
-    Sort Button
-    ========================================
-    */
-
-    function SortButton({
-        column,
-        children
-    }) {
-
-        const isActive =
-            sortColumn === column;
-
-
-        return (
+        <th>
 
             <button
-                className={
-                    `sort-button ${
-                        isActive
-                            ? "active"
-                            : ""
-                    }`
-                }
+                className="sort-button"
                 onClick={() =>
-                    handleSort(column)
+                    handleSort(
+                        sortKeyName
+                    )
                 }
             >
 
                 {children}
 
                 {isActive && (
-
-                    <span className="sort-arrow">
-
-                        {sortDescending
-                            ? " ↓"
-                            : " ↑"
-                        }
-
-                    </span>
-
+                    sortDirection === "asc"
+                        ? " ▲"
+                        : " ▼"
                 )}
 
             </button>
 
-        );
+        </th>
 
-    }
+    );
 
-
-    /*
-    ========================================
-    Render
-    ========================================
-    */
-
-    return (
-
-        <div className="table-container">
-
-            <table>
-
-                <thead>
-
-                    <tr>
-
-                        <th>
-                            <SortButton
-                                column="matchID"
-                            >
-                                Match
-                            </SortButton>
-                        </th>
+}
 
 
-                        <th>
-                            <SortButton
-                                column="team"
-                            >
-                                Team
-                            </SortButton>
-                        </th>
+return (
+
+    <div className="table-container">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <SortHeader
+                        sortKeyName="matchID"
+                    >
+                        Match
+                    </SortHeader>
+
+                    <SortHeader
+                        sortKeyName="team"
+                    >
+                        Team
+                    </SortHeader>
+
+                    <th>
+                        Alliance
+                    </th>
+
+                    <SortHeader
+                        sortKeyName="autoPoints"
+                    >
+                        Auto
+                    </SortHeader>
+
+                    <SortHeader
+                        sortKeyName="teleopPoints"
+                    >
+                        Teleop
+                    </SortHeader>
+
+                    <SortHeader
+                        sortKeyName="teleopPassPoints"
+                    >
+                        Pass
+                    </SortHeader>
+
+                    <SortHeader
+                        sortKeyName="climb"
+                    >
+                        Climb
+                    </SortHeader>
+
+                    <th>
+                        Notes
+                    </th>
+
+                </tr>
+
+            </thead>
 
 
-                        <th>
-                            Alliance
-                        </th>
+            <tbody>
 
+                {sortedMatches.map(
+                    match => (
 
-                        <th>
-                            <SortButton
-                                column="autoPoints"
-                            >
-                                Auto
-                            </SortButton>
-                        </th>
+                        <tr
+                            key={
+                                match.databaseID
+                            }
+                        >
 
+                            <td>
+                                {match.matchID}
+                            </td>
 
-                        <th>
-                            <SortButton
-                                column="teleopPoints"
-                            >
-                                Teleop
-                            </SortButton>
-                        </th>
+                            <td>
+                                {match.team}
+                            </td>
 
+                            <td>
+                                {match.alliance}
+                            </td>
 
-                        <th>
-                            <SortButton
-                                column="teleopPassPoints"
-                            >
-                                Pass
-                            </SortButton>
-                        </th>
+                            <td>
+                                {match.autoPoints}
+                            </td>
 
+                            <td>
+                                {match.teleopPoints}
+                            </td>
 
-                        <th>
-                            <SortButton
-                                column="climb"
-                            >
-                                Climb
-                            </SortButton>
-                        </th>
+                            <td>
+                                {match.teleopPassPoints}
+                            </td>
 
+                            <td>
+                                {match.climb}
+                            </td>
 
-                        <th>
-                            Notes
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                    {sortedMatches.length === 0 ? (
-
-                        <tr>
-
-                            <td
-                                colSpan="8"
-                                className="no-matches"
-                            >
-                                No matches found.
+                            <td>
+                                {match.notes}
                             </td>
 
                         </tr>
 
-                    ) : (
+                    )
+                )}
 
-                        sortedMatches.map(
-                            match => (
+            </tbody>
 
-                                <tr
-                                    key={
-                                        match.databaseID
-                                    }
-                                >
+        </table>
 
-                                    <td>
-                                        {
-                                            match.matchID
-                                        }
-                                    </td>
+    </div>
 
-
-                                    <td>
-                                        {
-                                            match.team
-                                        }
-                                    </td>
-
-
-                                    <td>
-
-                                        <span
-                                            className={
-                                                `alliance-badge ${
-                                                    match.alliance
-                                                }`
-                                            }
-                                        >
-                                            {
-                                                match.alliance
-                                            }
-                                        </span>
-
-                                    </td>
-
-
-                                    <td>
-                                        {
-                                            match.autoPoints
-                                        }
-                                    </td>
-
-
-                                    <td>
-                                        {
-                                            match.teleopPoints
-                                        }
-                                    </td>
-
-
-                                    <td>
-                                        {
-                                            match.teleopPassPoints
-                                        }
-                                    </td>
-
-
-                                    <td>
-                                        {
-                                            match.climb
-                                        }
-                                    </td>
-
-
-                                    <td className="notes-cell">
-
-                                        {
-                                            match.notes ||
-                                            "—"
-                                        }
-
-                                    </td>
-
-                                </tr>
-
-                            )
-                        )
-
-                    )}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    );
+);
 
 }
