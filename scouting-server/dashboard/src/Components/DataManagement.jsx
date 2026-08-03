@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import QRScanner from "./QRScanner.jsx";
 
 export default function DataManagement({
     onDataChanged
@@ -289,6 +290,9 @@ export default function DataManagement({
 
     }
 
+    /* QR Scanner State */
+
+    const [showScanner, setShowScanner] = useState(false);
 
     /*
     ========================================
@@ -351,6 +355,21 @@ export default function DataManagement({
             >
                 🗑️ Clear All Data
             </button>
+
+            {/* QR Scanner */}
+
+            <button
+                onClick={() => setShowScanner(true)}
+            >
+                📷 Scan QR Code
+            </button>
+
+            {showScanner && (
+                <QRScanner
+                    onClose={() => setShowScanner(false)}
+                    onDataImported={onDataChanged}
+                />
+            )}
 
         </div>
 

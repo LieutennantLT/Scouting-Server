@@ -155,7 +155,7 @@ app.post("/matches/import", (req, res) => {
         }
 
         const insert = db.prepare(`
-            INSERT INTO matches (
+            INSERT OR REPLACE INTO matches (
                 matchID,
                 team,
                 alliance,

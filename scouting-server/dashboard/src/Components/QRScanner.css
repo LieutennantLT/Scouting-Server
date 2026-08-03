@@ -1,0 +1,92 @@
+.qr-scanner-overlay {
+    position: fixed;
+
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.8);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    z-index: 10000;
+}
+
+
+.qr-scanner-modal {
+    position: relative;
+
+    width: 500px;
+    max-width: 90vw;
+
+    padding: 30px;
+
+    background: #1f2028;
+
+    border-radius: 16px;
+
+    box-shadow:
+        0 15px 50px rgba(0, 0, 0, 0.6);
+
+    text-align: center;
+}
+
+
+.qr-scanner-modal h2 {
+    margin-top: 0;
+
+    font-size: 28px;
+}
+
+
+.qr-scanner-modal p {
+    color: #bbb;
+
+    margin-bottom: 20px;
+}
+
+
+.qr-scanner-close {
+    position: absolute;
+
+    top: 10px;
+    right: 10px;
+
+    width: 36px;
+    height: 36px;
+
+    border: none;
+    border-radius: 50%;
+
+    background: transparent;
+
+    color: white;
+
+    font-size: 28px;
+
+    cursor: pointer;
+}
+
+
+.qr-scanner-close:hover {
+    background: #3a3b45;
+}
+
+
+.qr-reader {
+    width: 100%;
+
+    max-width: 400px;
+
+    margin: 0 auto;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+}
+
+
+.scanner-status {
+    margin-top: 20px;
+}
