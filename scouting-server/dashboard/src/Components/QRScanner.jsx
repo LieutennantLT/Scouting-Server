@@ -1,16 +1,23 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import "./QRScanner.css";
 
-export default function QRScanner({ onClose, onDataImported }) {
+export default function QRScanner({
+    onClose,
+    onDataImported
+}) {
 
     const scannerRef = useRef(null);
+    const scannerStartedRef = useRef(false);
     const processingRef = useRef(false);
+
+    const [starting, setStarting] = useState(true);
 
 
     useEffect(() => {
 
-        const scanner = new Html5Qrcode("qr-reader");
+        const scanner =
+            new Html5Qrcode("qr-reader");
 
         scannerRef.current = scanner;
 
@@ -19,37 +26,81 @@ export default function QRScanner({ onClose, onDataImported }) {
 
             try {
 
+                const cameras =
+                    await Html5Qrcode.getCameras();
+
+
+                if (!cameras || cameras.length === 0) {
+
+                    throw new Error(
+                        "No camera was found on this computer."
+                    );
+
+                }
+
+
+                console.log(
+                    "Available cameras:",
+                    cameras
+                );
+
+
+                // Use the first available camera
+                const cameraId =
+                    cameras[0].id;
+
+
                 await scanner.start(
-                    { facingMode: "environment" },
+
+                    cameraId,
 
                     {
                         fps: 10,
+
                         qrbox: {
                             width: 300,
                             height: 300
-                        }
+                        },
+
+                        aspectRatio: 1.0
                     },
+
 
                     async (decodedText) => {
 
-                        // Prevent the scanner from processing
-                        // the same QR code multiple times.
-                        if (processingRef.current) {
+                        if (
+                            processingRef.current
+                        ) {
                             return;
                         }
 
+
                         processingRef.current = true;
 
-                        await handleQRCode(decodedText);
+
+                        await handleQRCode(
+                            decodedText
+                        );
 
                     },
 
+
                     () => {
-                        // QR code not detected.
-                        // This happens constantly while scanning,
-                        // so we intentionally do nothing here.
+                        // QR code not detected yet.
+                        // This callback happens constantly,
+                        // so we don't do anything here.
                     }
+
                 );
+
+
+                // Only mark it as started AFTER
+                // start() successfully completes.
+
+                scannerStartedRef.current = true;
+
+                setStarting(false);
+
 
             } catch (error) {
 
@@ -58,9 +109,14 @@ export default function QRScanner({ onClose, onDataImported }) {
                     error
                 );
 
+
+                setStarting(false);
+
+
                 alert(
-                    "Could not access the camera. Make sure camera permissions are allowed."
+                    `Could not access the camera.\n\n${error.message}`
                 );
+
 
                 onClose();
 
@@ -74,131 +130,195 @@ export default function QRScanner({ onClose, onDataImported }) {
 
         return () => {
 
-            if (scannerRef.current) {
-
-                scannerRef.current
-                    .stop()
-                    .catch(() => {});
-
-            }
+            stopScanner();
 
         };
 
-    }, []);
 
+        async function stopScanner() {
 
-    async function handleQRCode(decodedText) {
+            if (
+                scannerRef.current &&
+                scannerStartedRef.current
+            ) {
 
-        try {
+                try {
 
-            console.log(
-                "QR data received:",
-                decodedText
-            );
+                    await scannerRef.current.stop();
 
+                    scannerStartedRef.current =
+                        false;
 
-            // Convert QR string back into JavaScript data
-            const importedMatches =
-                JSON.parse(decodedText);
+                    console.log(
+                        "QR scanner stopped."
+                    );
 
+                } catch (error) {
 
-            // Make sure it is an array
-            if (!Array.isArray(importedMatches)) {
+                    console.error(
+                        "Error stopping QR scanner:",
+                        error
+                    );
 
-                throw new Error(
-                    "QR code does not contain a match array."
-                );
-
-            }
-
-
-            if (importedMatches.length === 0) {
-
-                throw new Error(
-                    "QR code contains no matches."
-                );
+                }
 
             }
-
-
-            console.log(
-                "Matches received:",
-                importedMatches
-            );
-
-
-            // Stop camera before importing
-            if (scannerRef.current) {
-
-                await scannerRef.current
-                    .stop()
-                    .catch(() => {});
-
-            }
-
-
-            // Send matches to server
-            const response =
-                await fetch(
-                    "http://localhost:3000/matches/import",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify(
-                                importedMatches
-                            )
-                    }
-                );
-
-
-            const result =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    result.error ||
-                    "Server failed to import matches."
-                );
-
-            }
-
-
-            alert(
-                `Successfully imported ${result.count} matches.`
-            );
-
-
-            if (onDataImported) {
-                onDataImported();
-            }
-
-
-            onClose();
-
-        } catch (error) {
-
-            console.error(
-                "Error processing QR code:",
-                error
-            );
-
-            alert(
-                `Invalid QR code:\n${error.message}`
-            );
-
-            processingRef.current = false;
 
         }
 
-    }
+
+        async function handleQRCode(
+            decodedText
+        ) {
+
+            try {
+
+                console.log(
+                    "QR data received:",
+                    decodedText
+                );
+
+
+                /*
+                ========================================
+                Convert QR data back into matches
+                ========================================
+                */
+
+                const importedMatches =
+                    JSON.parse(decodedText);
+
+
+                if (
+                    !Array.isArray(
+                        importedMatches
+                    )
+                ) {
+
+                    throw new Error(
+                        "QR code does not contain an array of matches."
+                    );
+
+                }
+
+
+                if (
+                    importedMatches.length === 0
+                ) {
+
+                    throw new Error(
+                        "QR code contains no matches."
+                    );
+
+                }
+
+
+                console.log(
+                    "Matches received:",
+                    importedMatches
+                );
+
+
+                /*
+                ========================================
+                Stop camera
+                ========================================
+                */
+
+                if (
+                    scannerRef.current &&
+                    scannerStartedRef.current
+                ) {
+
+                    await scannerRef.current.stop();
+
+                    scannerStartedRef.current =
+                        false;
+
+                }
+
+
+                /*
+                ========================================
+                Send matches to server
+                ========================================
+                */
+
+                const response =
+                    await fetch(
+                        "http://localhost:3000/matches/import",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    importedMatches
+                                )
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        result.error ||
+                        "Server failed to import matches."
+                    );
+
+                }
+
+
+                /*
+                ========================================
+                Success
+                ========================================
+                */
+
+                alert(
+                    `Successfully imported ${result.count} matches.`
+                );
+
+
+                if (onDataImported) {
+
+                    onDataImported();
+
+                }
+
+
+                onClose();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error processing QR code:",
+                    error
+                );
+
+
+                alert(
+                    `Invalid QR code.\n\n${error.message}`
+                );
+
+
+                processingRef.current =
+                    false;
+
+            }
+
+        }
+
+    }, [onClose, onDataImported]);
 
 
     return (
@@ -206,6 +326,8 @@ export default function QRScanner({ onClose, onDataImported }) {
         <div className="qr-scanner-overlay">
 
             <div className="qr-scanner-modal">
+
+                {/* Close button */}
 
                 <button
                     className="qr-scanner-close"
@@ -221,10 +343,12 @@ export default function QRScanner({ onClose, onDataImported }) {
 
 
                 <p>
-                    Point the camera at the QR code
-                    displayed on the scouting device.
+                    Point the camera at the QR
+                    code on the scouting device.
                 </p>
 
+
+                {/* Camera preview */}
 
                 <div
                     id="qr-reader"
@@ -232,9 +356,19 @@ export default function QRScanner({ onClose, onDataImported }) {
                 />
 
 
-                <p className="scanner-status">
-                    Waiting for QR code...
-                </p>
+                {starting ? (
+
+                    <p className="scanner-status">
+                        Starting camera...
+                    </p>
+
+                ) : (
+
+                    <p className="scanner-status">
+                        Aim the QR code inside the box.
+                    </p>
+
+                )}
 
             </div>
 

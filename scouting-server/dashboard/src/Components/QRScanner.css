@@ -17,7 +17,7 @@
 .qr-scanner-modal {
     position: relative;
 
-    width: 500px;
+    width: 550px;
     max-width: 90vw;
 
     padding: 30px;
@@ -77,16 +77,29 @@
 .qr-reader {
     width: 100%;
 
-    max-width: 400px;
+    max-width: 450px;
 
-    margin: 0 auto;
+    margin: 20px auto;
 
     overflow: hidden;
 
-    border-radius: 10px;
+    border-radius: 12px;
+
+    background: black;
+}
+
+
+.qr-reader video {
+    width: 100% !important;
+
+    height: auto !important;
+
+    border-radius: 12px;
 }
 
 
 .scanner-status {
-    margin-top: 20px;
+    margin-top: 15px;
+
+    font-size: 16px;
 }
