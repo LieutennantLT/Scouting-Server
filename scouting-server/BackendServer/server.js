@@ -37,9 +37,10 @@ app.post("/match", (req, res) => {
             climb,
             notes,
             broke,
-            scoutName
+            scoutName,
+            trench
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     insert.run(
@@ -52,7 +53,8 @@ app.post("/match", (req, res) => {
         match.climb,
         match.notes,
         match.broke,
-        match.scoutName
+        match.scoutName,
+        match.trench
     );
 
     res.json({
@@ -163,9 +165,10 @@ app.post("/matches/import", (req, res) => {
                 climb,
                 notes,
                 broke,
-                scoutName
+                scoutName,
+                trench
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const importTransaction = db.transaction(
@@ -183,7 +186,8 @@ app.post("/matches/import", (req, res) => {
                         match.climb,
                         match.notes,
                         match.broke,
-                        match.scoutName
+                        match.scoutName,
+                        match.trench
                     );
 
                 }

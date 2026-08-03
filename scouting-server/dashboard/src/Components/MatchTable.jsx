@@ -207,6 +207,10 @@ return (
                     </SortHeader>
 
                     <th>
+                        Trench
+                    </th>
+
+                    <th>
                         Notes
                     </th>
 
@@ -252,6 +256,10 @@ return (
 
                             <td>
                                 {match.climb}
+                            </td>
+
+                            <td>
+                                {match.trench}
                             </td>
 
                             <td>
