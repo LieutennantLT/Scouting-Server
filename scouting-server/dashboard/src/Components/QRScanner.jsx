@@ -167,192 +167,273 @@ export default function QRScanner({
         }
 
 
-        async function handleQRCode(
+        async function handleQRCode(decodedText) {
+
+    try {
+
+        console.log(
+            "QR data received:",
             decodedText
+        );
+
+        /*
+        ========================================
+        Decode QR payload
+        ========================================
+        */
+
+        const qrPayload =
+            JSON.parse(decodedText);
+
+
+        /*
+        ========================================
+        Validate QR payload
+        ========================================
+        */
+
+        if (
+            qrPayload.type !== "scouting-data"
         ) {
 
-            try {
-
-                console.log(
-                    "QR data received:",
-                    decodedText
-                );
-
-
-                /*
-                ========================================
-                Convert QR data back into matches
-                ========================================
-                */
-
-               const qrData =
-                    JSON.parse(decodedText);
-
-
-                if (
-                    qrData.type !==
-                    "scouting-data"
-                ) {
-
-                    throw new Error(
-                        "Invalid scouting QR code."
-                    );
-
-                }
-
-
-                const records =
-                    qrData.records;
-
-
-                if (
-                    !Array.isArray(records)
-                ) {
-
-                    throw new Error(
-                        "QR code contains invalid data."
-                    );
-
-                }
-
-
-                if (
-                    importedMatches.length === 0
-                ) {
-
-                    throw new Error(
-                        "QR code contains no matches."
-                    );
-
-                }
-
-
-                console.log(
-                    "Matches received:",
-                    importedMatches
-                );
-
-
-                /*
-                ========================================
-                Stop camera
-                ========================================
-                */
-
-                if (
-                    scannerRef.current &&
-                    scannerStartedRef.current
-                ) {
-
-                    await scannerRef.current.stop();
-
-                    scannerStartedRef.current =
-                        false;
-
-                }
-
-
-                /*
-                ========================================
-                Send matches to server
-                ========================================
-                */
-
-                const response =
-                    await fetch(
-                        "http://localhost:3000/matches/import",
-                        {
-                            method: "POST",
-
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-
-                            body:
-                                JSON.stringify(
-                                    importedMatches
-                                )
-                        }
-                    );
-
-                const individualMatches =
-                    records
-                        .filter(
-                            record =>
-                                record.type ===
-                                "individual"
-                        )
-                        .map(
-                            record =>
-                                record.data
-                        );
-
-
-                const allianceMatches =
-                    records
-                        .filter(
-                            record =>
-                                record.type ===
-                                "alliance"
-                        )
-                        .map(
-                            record =>
-                                record.data
-                        );
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        result.error ||
-                        "Server failed to import matches."
-                    );
-
-                }
-
-
-                /*
-                ========================================
-                Success
-                ========================================
-                */
-
-                alert(
-                    `Successfully imported ${result.count} matches.`
-                );
-
-
-                if (onDataImported) {
-
-                    onDataImported();
-
-                }
-
-
-                onClose();
-
-
-            } catch (error) {
-
-                console.error(
-                    "Error processing QR code:",
-                    error
-                );
-
-
-                alert(
-                    `Invalid QR code.\n\n${error.message}`
-                );
-
-
-                processingRef.current =
-                    false;
-
-            }
+            throw new Error(
+                "This QR code is not a scouting data QR code."
+            );
 
         }
 
-    }, [onClose, onDataImported]);
+
+        if (
+            !Array.isArray(qrPayload.records)
+        ) {
+
+            throw new Error(
+                "QR code does not contain valid scouting records."
+            );
+
+        }
+
+
+        if (
+            qrPayload.records.length === 0
+        ) {
+
+            throw new Error(
+                "QR code contains no scouting data."
+            );
+
+        }
+
+
+        console.log(
+            "Scouting records received:",
+            qrPayload.records
+        );
+
+
+        /*
+        ========================================
+        Separate individual and alliance data
+        ========================================
+        */
+
+        const individualMatches =
+            qrPayload.records
+                .filter(
+                    record =>
+                        record.type === "individual"
+                )
+                .map(
+                    record =>
+                        record.data
+                );
+
+
+        const allianceMatches =
+            qrPayload.records
+                .filter(
+                    record =>
+                        record.type === "alliance"
+                )
+                .map(
+                    record =>
+                        record.data
+                );
+
+
+        console.log(
+            "Individual matches:",
+            individualMatches
+        );
+
+        console.log(
+            "Alliance matches:",
+            allianceMatches
+        );
+
+
+        /*
+        ========================================
+        Stop camera
+        ========================================
+        */
+
+        if (
+            scannerRef.current &&
+            scannerStartedRef.current
+        ) {
+
+            await scannerRef.current.stop();
+
+            scannerStartedRef.current = false;
+
+        }
+
+
+        /*
+        ========================================
+        Send individual matches
+        ========================================
+        */
+
+        let individualCount = 0;
+        let allianceCount = 0;
+
+
+        if (
+            individualMatches.length > 0
+        ) {
+
+            const response =
+                await fetch(
+                    "http://localhost:3000/matches/import",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                individualMatches
+                            )
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    result.error ||
+                    "Failed to import individual matches."
+                );
+
+            }
+
+
+            individualCount =
+                result.count;
+
+        }
+
+
+        /*
+        ========================================
+        Send alliance matches
+        ========================================
+        */
+
+        if (
+            allianceMatches.length > 0
+        ) {
+
+            const response =
+                await fetch(
+                    "http://localhost:3000/alliances/import",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                allianceMatches
+                            )
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    result.error ||
+                    "Failed to import alliance matches."
+                );
+
+            }
+
+
+            allianceCount =
+                result.count;
+
+        }
+
+
+        /*
+        ========================================
+        Success
+        ========================================
+        */
+
+        alert(
+            `Successfully imported:\n\n` +
+            `${individualCount} individual match(es)\n` +
+            `${allianceCount} alliance match(es)`
+        );
+
+
+        if (onDataImported) {
+
+            onDataImported();
+
+        }
+
+
+        onClose();
+
+
+    } catch (error) {
+
+        console.error(
+            "Error processing QR code:",
+            error
+        );
+
+
+        alert(
+            `Invalid QR code.\n\n${error.message}`
+        );
+
+
+        processingRef.current =
+            false;
+
+    }
+
+}
 
 
     return (
@@ -410,4 +491,5 @@ export default function QRScanner({
 
     );
 
-}
+    }
+)}
