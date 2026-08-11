@@ -8,11 +8,7 @@ export default function DataManagement({
     const fileInputRef = useRef(null);
 
 
-    /*
-    ========================================
-    Export Data
-    ========================================
-    */
+    /* Export data */
 
     async function exportData() {
 
