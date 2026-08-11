@@ -14,23 +14,406 @@ export default function QRScanner({
     const [starting, setStarting] = useState(true);
 
 
-    useEffect(() => {
+    /*
+    ========================================
+    Stop Scanner
+    ========================================
+    */
+
+    async function stopScanner() {
 
         const scanner =
-            new Html5Qrcode("qr-reader");
+            scannerRef.current;
 
-        scannerRef.current = scanner;
+
+        if (!scanner) {
+            return;
+        }
+
+
+        if (!scannerStartedRef.current) {
+            return;
+        }
+
+
+        try {
+
+            await scanner.stop();
+
+            scanner.clear();
+
+            scannerStartedRef.current =
+                false;
+
+            console.log(
+                "QR scanner stopped."
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Error stopping QR scanner:",
+                error
+            );
+
+        }
+
+    }
+
+
+    /*
+    ========================================
+    Close Scanner
+    ========================================
+    */
+
+    async function handleClose() {
+
+        /*
+        Stop the camera first
+        */
+
+        await stopScanner();
+
+
+        /*
+        Then close the component
+        */
+
+        onClose();
+
+    }
+
+
+    /*
+    ========================================
+    QR Code Handler
+    ========================================
+    */
+
+    async function handleQRCode(
+        decodedText
+    ) {
+
+        try {
+
+            console.log(
+                "QR data received:",
+                decodedText
+            );
+
+
+            /*
+            ========================================
+            Decode payload
+            ========================================
+            */
+
+            const qrPayload =
+                JSON.parse(decodedText);
+
+
+            if (
+                qrPayload.type !==
+                "scouting-data"
+            ) {
+
+                throw new Error(
+                    "This QR code is not a scouting data QR code."
+                );
+
+            }
+
+
+            if (
+                !Array.isArray(
+                    qrPayload.records
+                )
+            ) {
+
+                throw new Error(
+                    "QR code does not contain valid scouting records."
+                );
+
+            }
+
+
+            if (
+                qrPayload.records.length === 0
+            ) {
+
+                throw new Error(
+                    "QR code contains no scouting data."
+                );
+
+            }
+
+
+            /*
+            ========================================
+            Separate record types
+            ========================================
+            */
+
+            const individualMatches =
+                qrPayload.records
+                    .filter(
+                        record =>
+                            record.type ===
+                            "individual"
+                    )
+                    .map(
+                        record =>
+                            record.data
+                    );
+
+
+            const allianceMatches =
+                qrPayload.records
+                    .filter(
+                        record =>
+                            record.type ===
+                            "alliance"
+                    )
+                    .map(
+                        record =>
+                            record.data
+                    );
+
+
+            console.log(
+                "Individual matches:",
+                individualMatches
+            );
+
+
+            console.log(
+                "Alliance matches:",
+                allianceMatches
+            );
+
+
+            /*
+            ========================================
+            Stop camera
+            ========================================
+            */
+
+            await stopScanner();
+
+
+            /*
+            ========================================
+            Import individual matches
+            ========================================
+            */
+
+            let individualCount = 0;
+            let allianceCount = 0;
+
+
+            if (
+                individualMatches.length > 0
+            ) {
+
+                const response =
+                    await fetch(
+                        "http://localhost:3000/matches/import",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    individualMatches
+                                )
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        result.error ||
+                        "Failed to import individual matches."
+                    );
+
+                }
+
+
+                individualCount =
+                    result.count;
+
+            }
+
+
+            /*
+            ========================================
+            Import alliance matches
+            ========================================
+            */
+
+            if (
+                allianceMatches.length > 0
+            ) {
+
+                const response =
+                    await fetch(
+                        "http://localhost:3000/alliances/import",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    allianceMatches
+                                )
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        result.error ||
+                        "Failed to import alliance matches."
+                    );
+
+                }
+
+
+                allianceCount =
+                    result.count;
+
+            }
+
+
+            /*
+            ========================================
+            Success
+            ========================================
+            */
+
+            alert(
+                `Successfully imported:\n\n` +
+                `${individualCount} individual match(es)\n` +
+                `${allianceCount} alliance match(es)`
+            );
+
+
+            if (onDataImported) {
+
+                onDataImported();
+
+            }
+
+
+            onClose();
+
+
+        } catch (error) {
+
+            console.error(
+                "Error processing QR code:",
+                error
+            );
+
+
+            alert(
+                `Invalid QR code.\n\n${error.message}`
+            );
+
+
+            processingRef.current =
+                false;
+
+        }
+
+    }
+
+
+    /*
+    ========================================
+    Start Scanner
+    ========================================
+    */
+
+    useEffect(() => {
+
+        let cancelled = false;
 
 
         async function startScanner() {
 
             try {
 
+                /*
+                ========================================
+                Make sure element exists
+                ========================================
+                */
+
+                const readerElement =
+                    document.getElementById(
+                        "qr-reader"
+                    );
+
+
+                if (!readerElement) {
+
+                    throw new Error(
+                        "QR reader element was not found."
+                    );
+
+                }
+
+
+                /*
+                ========================================
+                Create scanner
+                ========================================
+                */
+
+                const scanner =
+                    new Html5Qrcode(
+                        "qr-reader"
+                    );
+
+
+                scannerRef.current =
+                    scanner;
+
+
+                /*
+                ========================================
+                Find cameras
+                ========================================
+                */
+
                 const cameras =
                     await Html5Qrcode.getCameras();
 
 
-                if (!cameras || cameras.length === 0) {
+                if (
+                    !cameras ||
+                    cameras.length === 0
+                ) {
 
                     throw new Error(
                         "No camera was found on this computer."
@@ -45,10 +428,15 @@ export default function QRScanner({
                 );
 
 
-                // Use the first available camera
                 const cameraId =
                     cameras[0].id;
 
+
+                /*
+                ========================================
+                Start camera
+                ========================================
+                */
 
                 await scanner.start(
 
@@ -75,7 +463,8 @@ export default function QRScanner({
                         }
 
 
-                        processingRef.current = true;
+                        processingRef.current =
+                            true;
 
 
                         await handleQRCode(
@@ -87,19 +476,44 @@ export default function QRScanner({
 
                     () => {
                         // QR code not detected yet.
-                        // This callback happens constantly,
-                        // so we don't do anything here.
                     }
 
                 );
 
 
-                // Only mark it as started AFTER
-                // start() successfully completes.
+                /*
+                ========================================
+                Component may have closed
+                ========================================
+                */
 
-                scannerStartedRef.current = true;
+                if (cancelled) {
+
+                    try {
+
+                        await scanner.stop();
+
+                    } catch {
+
+                        // Scanner wasn't fully started.
+
+                    }
+
+                    return;
+
+                }
+
+
+                scannerStartedRef.current =
+                    true;
+
 
                 setStarting(false);
+
+
+                console.log(
+                    "QR scanner started."
+                );
 
 
             } catch (error) {
@@ -113,12 +527,15 @@ export default function QRScanner({
                 setStarting(false);
 
 
-                alert(
-                    `Could not access the camera.\n\n${error.message}`
-                );
+                if (!cancelled) {
 
+                    alert(
+                        `Could not access the camera.\n\n${error.message}`
+                    );
 
-                onClose();
+                    onClose();
+
+                }
 
             }
 
@@ -128,313 +545,29 @@ export default function QRScanner({
         startScanner();
 
 
+        /*
+        ========================================
+        Cleanup when component closes
+        ========================================
+        */
+
         return () => {
+
+            cancelled = true;
 
             stopScanner();
 
         };
 
 
-        async function stopScanner() {
+    }, [onClose, onDataImported]);
 
-            if (
-                scannerRef.current &&
-                scannerStartedRef.current
-            ) {
 
-                try {
-
-                    await scannerRef.current.stop();
-
-                    scannerStartedRef.current =
-                        false;
-
-                    console.log(
-                        "QR scanner stopped."
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        "Error stopping QR scanner:",
-                        error
-                    );
-
-                }
-
-            }
-
-        }
-
-
-        async function handleQRCode(decodedText) {
-
-    try {
-
-        console.log(
-            "QR data received:",
-            decodedText
-        );
-
-        /*
-        ========================================
-        Decode QR payload
-        ========================================
-        */
-
-        const qrPayload =
-            JSON.parse(decodedText);
-
-
-        /*
-        ========================================
-        Validate QR payload
-        ========================================
-        */
-
-        if (
-            qrPayload.type !== "scouting-data"
-        ) {
-
-            throw new Error(
-                "This QR code is not a scouting data QR code."
-            );
-
-        }
-
-
-        if (
-            !Array.isArray(qrPayload.records)
-        ) {
-
-            throw new Error(
-                "QR code does not contain valid scouting records."
-            );
-
-        }
-
-
-        if (
-            qrPayload.records.length === 0
-        ) {
-
-            throw new Error(
-                "QR code contains no scouting data."
-            );
-
-        }
-
-
-        console.log(
-            "Scouting records received:",
-            qrPayload.records
-        );
-
-
-        /*
-        ========================================
-        Separate individual and alliance data
-        ========================================
-        */
-
-        const individualMatches =
-            qrPayload.records
-                .filter(
-                    record =>
-                        record.type === "individual"
-                )
-                .map(
-                    record =>
-                        record.data
-                );
-
-
-        const allianceMatches =
-            qrPayload.records
-                .filter(
-                    record =>
-                        record.type === "alliance"
-                )
-                .map(
-                    record =>
-                        record.data
-                );
-
-
-        console.log(
-            "Individual matches:",
-            individualMatches
-        );
-
-        console.log(
-            "Alliance matches:",
-            allianceMatches
-        );
-
-
-        /*
-        ========================================
-        Stop camera
-        ========================================
-        */
-
-        if (
-            scannerRef.current &&
-            scannerStartedRef.current
-        ) {
-
-            await scannerRef.current.stop();
-
-            scannerStartedRef.current = false;
-
-        }
-
-
-        /*
-        ========================================
-        Send individual matches
-        ========================================
-        */
-
-        let individualCount = 0;
-        let allianceCount = 0;
-
-
-        if (
-            individualMatches.length > 0
-        ) {
-
-            const response =
-                await fetch(
-                    "http://localhost:3000/matches/import",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify(
-                                individualMatches
-                            )
-                    }
-                );
-
-
-            const result =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    result.error ||
-                    "Failed to import individual matches."
-                );
-
-            }
-
-
-            individualCount =
-                result.count;
-
-        }
-
-
-        /*
-        ========================================
-        Send alliance matches
-        ========================================
-        */
-
-        if (
-            allianceMatches.length > 0
-        ) {
-
-            const response =
-                await fetch(
-                    "http://localhost:3000/alliances/import",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify(
-                                allianceMatches
-                            )
-                    }
-                );
-
-
-            const result =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    result.error ||
-                    "Failed to import alliance matches."
-                );
-
-            }
-
-
-            allianceCount =
-                result.count;
-
-        }
-
-
-        /*
-        ========================================
-        Success
-        ========================================
-        */
-
-        alert(
-            `Successfully imported:\n\n` +
-            `${individualCount} individual match(es)\n` +
-            `${allianceCount} alliance match(es)`
-        );
-
-
-        if (onDataImported) {
-
-            onDataImported();
-
-        }
-
-
-        onClose();
-
-
-    } catch (error) {
-
-        console.error(
-            "Error processing QR code:",
-            error
-        );
-
-
-        alert(
-            `Invalid QR code.\n\n${error.message}`
-        );
-
-
-        processingRef.current =
-            false;
-
-    }
-
-}
-
+    /*
+    ========================================
+    Render
+    ========================================
+    */
 
     return (
 
@@ -442,11 +575,12 @@ export default function QRScanner({
 
             <div className="qr-scanner-modal">
 
+
                 {/* Close button */}
 
                 <button
                     className="qr-scanner-close"
-                    onClick={onClose}
+                    onClick={handleClose}
                 >
                     ×
                 </button>
@@ -491,5 +625,4 @@ export default function QRScanner({
 
     );
 
-    }
-)}
+}
