@@ -185,18 +185,32 @@ export default function QRScanner({
                 ========================================
                 */
 
-                const importedMatches =
+               const qrData =
                     JSON.parse(decodedText);
 
 
                 if (
-                    !Array.isArray(
-                        importedMatches
-                    )
+                    qrData.type !==
+                    "scouting-data"
                 ) {
 
                     throw new Error(
-                        "QR code does not contain an array of matches."
+                        "Invalid scouting QR code."
+                    );
+
+                }
+
+
+                const records =
+                    qrData.records;
+
+
+                if (
+                    !Array.isArray(records)
+                ) {
+
+                    throw new Error(
+                        "QR code contains invalid data."
                     );
 
                 }
@@ -262,10 +276,30 @@ export default function QRScanner({
                         }
                     );
 
+                const individualMatches =
+                    records
+                        .filter(
+                            record =>
+                                record.type ===
+                                "individual"
+                        )
+                        .map(
+                            record =>
+                                record.data
+                        );
 
-                const result =
-                    await response.json();
 
+                const allianceMatches =
+                    records
+                        .filter(
+                            record =>
+                                record.type ===
+                                "alliance"
+                        )
+                        .map(
+                            record =>
+                                record.data
+                        );
 
                 if (!response.ok) {
 

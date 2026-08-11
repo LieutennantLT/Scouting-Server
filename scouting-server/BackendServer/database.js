@@ -23,4 +23,24 @@ db.exec(`
     )
 `);
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS alliance_matches (
+
+        databaseID INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        matchID INTEGER,
+
+        team1 INTEGER,
+        team1Notes TEXT,
+
+        team2 INTEGER,
+        team2Notes TEXT,
+
+        team3 INTEGER,
+        team3Notes TEXT
+
+    )
+`);
+
+
 export default db;
