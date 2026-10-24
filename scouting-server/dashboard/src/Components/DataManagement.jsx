@@ -8,11 +8,7 @@ export default function DataManagement({
     const fileInputRef = useRef(null);
 
 
-    /*
-    ========================================
-    Export Data
-    ========================================
-    */
+    /* Export data */
 
     async function exportData() {
 
@@ -94,11 +90,7 @@ export default function DataManagement({
     }
 
 
-    /*
-    ========================================
-    Import Data
-    ========================================
-    */
+    /* Import data  */
 
     function openFilePicker() {
 
@@ -209,19 +201,12 @@ export default function DataManagement({
 
         }
 
-
-        // Allow selecting the same file again
-
         event.target.value = "";
 
     }
 
 
-    /*
-    ========================================
-    Clear Data
-    ========================================
-    */
+    /* Clear data  */
 
     async function clearData() {
 
@@ -294,11 +279,7 @@ export default function DataManagement({
 
     const [showScanner, setShowScanner] = useState(false);
 
-    /*
-    ========================================
-    Render
-    ========================================
-    */
+    /* Render  */
 
     return (
 
@@ -321,7 +302,7 @@ export default function DataManagement({
             <button
                 onClick={exportData}
             >
-                📥 Export Data
+                Export Data
             </button>
 
 
@@ -330,7 +311,7 @@ export default function DataManagement({
             <button
                 onClick={openFilePicker}
             >
-                📤 Import Data
+                Import Data
             </button>
 
 
@@ -353,7 +334,7 @@ export default function DataManagement({
                 className="danger-button"
                 onClick={clearData}
             >
-                🗑️ Clear All Data
+                Clear All Data
             </button>
 
             {/* QR Scanner */}
@@ -361,7 +342,7 @@ export default function DataManagement({
             <button
                 onClick={() => setShowScanner(true)}
             >
-                📷 Scan QR Code
+                Scan QR Code
             </button>
 
             {showScanner && (
