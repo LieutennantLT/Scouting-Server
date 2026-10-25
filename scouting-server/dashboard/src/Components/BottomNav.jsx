@@ -6,32 +6,26 @@ export default function BottomNavigation({
     const tabs = [
         {
             id: "matches",
-            icon: "📋",
             label: "Overall Match View"
         },
         {
             id: "teams",
-            icon: "👥",
             label: "Overall Team View"
         },
         {
             id: "lookup",
-            icon: "🔍",
             label: "Team Lookup"
         },
         {
             id: "graphs",
-            icon: "📊",
             label: "Graphs"
         },
         {
             id: "simulator",
-            icon: "🎮",
             label: "Simulator"
         },
         {
             id: "data",
-            icon: "💾",
             label: "Data"
         }
     ];

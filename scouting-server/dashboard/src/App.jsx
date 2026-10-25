@@ -16,8 +16,7 @@ import DataManagement from "./Components/DataManagement.jsx";
 
 function App() {
 
-    const [activeTab, setActiveTab] =
-        useState("matches");
+    const [activeTab, setActiveTab] = useState("matches");
 
     const {
         matches,
@@ -26,11 +25,7 @@ function App() {
     } = useMatches();
 
 
-    /*
-    ========================================
-    Loading
-    ========================================
-    */
+    /* Loading */
 
     if (loading) {
 
@@ -52,12 +47,7 @@ function App() {
 
     }
 
-
-    /*
-    ========================================
-    Current Page
-    ========================================
-    */
+    /* Current Page  */
 
     function renderCurrentPage() {
 
@@ -130,26 +120,19 @@ function App() {
     }
 
 
-    /*
-    ========================================
-    Render
-    ========================================
-    */
+    /* Render */
 
     return (
 
         <div className="dashboard">
 
-            {/* Current Page */}
+            {/* Current page */}
 
             <main className="dashboard-content">
 
                 {renderCurrentPage()}
 
             </main>
-
-
-            {/* Fixed Bottom Navigation */}
 
             <BottomNav
                 activeTab={activeTab}
