@@ -11,7 +11,15 @@ export default function QRScanner({
     const scannerStartedRef = useRef(false);
     const processingRef = useRef(false);
 
+    const onCloseRef = useRef(onClose);
+    const onDataImportedRef = useRef(onDataImported);
+
     const [starting, setStarting] = useState(true);
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+        onDataImportedRef.current = onDataImported;
+    }, [onClose, onDataImported]);
 
 
     /*
@@ -80,7 +88,7 @@ export default function QRScanner({
         Then close the component
         */
 
-        onClose();
+        onCloseRef.current();
 
     }
 
@@ -317,14 +325,8 @@ export default function QRScanner({
             );
 
 
-            if (onDataImported) {
-
-                onDataImported();
-
-            }
-
-
-            onClose();
+            onDataImportedRef.current?.();
+            onCloseRef.current();
 
 
         } catch (error) {
@@ -406,9 +408,9 @@ export default function QRScanner({
                 ========================================
                 */
 
-                const cameras =
-                    await Html5Qrcode.getCameras();
+                const cameras = await Html5Qrcode.getCameras();
 
+                if (cancelled) { return; }
 
                 if (
                     !cameras ||
@@ -488,19 +490,18 @@ export default function QRScanner({
                 */
 
                 if (cancelled) {
-
                     try {
-
                         await scanner.stop();
+                        scanner.clear();
+                    } catch (error) {
+                        console.error("Scanner cleanup failed:", error);
+                    }
 
-                    } catch {
-
-                        // Scanner wasn't fully started.
-
+                    if (scannerRef.current === scanner) {
+                        scannerRef.current = null;
                     }
 
                     return;
-
                 }
 
 
@@ -533,7 +534,7 @@ export default function QRScanner({
                         `Could not access the camera.\n\n${error.message}`
                     );
 
-                    onClose();
+                    onCloseRef.current();
 
                 }
 
@@ -560,7 +561,7 @@ export default function QRScanner({
         };
 
 
-    }, [onClose, onDataImported]);
+    }, []);
 
 
     /*
