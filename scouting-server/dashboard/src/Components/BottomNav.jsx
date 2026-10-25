@@ -47,11 +47,6 @@ export default function BottomNavigation({
                         setActiveTab(tab.id)
                     }
                 >
-
-                    <span className="nav-icon">
-                        {tab.icon}
-                    </span>
-
                     <span>
                         {tab.label}
                     </span>
